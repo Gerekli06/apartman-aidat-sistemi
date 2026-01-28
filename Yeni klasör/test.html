@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <button onclick="getAidatlar()">Aidatları Getir</button>
+
+    <pre id="result"></pre>
+
+    <script>
+      function getAidatlar() {
+        fetch("http://localhost:5000/api/aidat/me", {
+          headers: {
+            Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY5NGY4ZjFlYjIyNzA0ZGI4ZTg1YmFiNyIsInJvbGUiOiJ1c2VyIiwiaWF0IjoxNzY2ODIxNjkwLCJleHAiOjE3NjY5MDgwOTB9.wLo2VzBW0__B6Vw0gFX-DWLchSHawCmE0lYVu848waA",
+          },
+        })
+          .then(res => {
+            console.log("STATUS:", res.status);
+            return res.json();
+          })
+          .then(data => {
+            console.log("DATA:", data);
+            document.getElementById("result").innerText =
+              JSON.stringify(data, null, 2);
+          })
+          .catch(err => {
+            console.error("HATA:", err);
+          });
+      }
+    </script>
+  </body>
+</html>

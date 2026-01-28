@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<!--link rel="manifest" href="manifest.json">-->
+<meta name="theme-color" content="#007bff">
+<title>Aidat Sistemi</title>
+
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+
+<style>
+body { font-family:Arial; background:#f4f6f8; padding:20px }
+.card { background:#fff; padding:20px; margin-bottom:20px; border-radius:8px }
+input, select, button { padding:8px; margin:5px 0; width:100%; max-width:300px }
+button { background:#007bff; color:#fff; border:none; border-radius:4px }
+button.danger { background:#dc3545 }
+ul { list-style:none; padding:0 }
+li { background:#fff; padding:10px; margin-bottom:8px; border-radius:6px;
+     display:flex; justify-content:space-between; align-items:center; gap:10px }
+.paid { color:green; font-weight:bold }
+.unpaid { color:red; font-weight:bold }
+.small { font-size:13px; color:#555 }
+@media (max-width: 768px) {
+
+  body {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  input, select, button {
+    max-width: 100%;
+    font-size: 16px; /* iOS zoom engeller */
+  }
+
+  li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  li button {
+    width: 100%;
+  }
+
+  h2, h3 {
+    font-size: 18px;
+  }
+}
+li > button {
+  margin-top: 5px;
+}
+#loginCard {
+  max-width: 400px;
+  margin: auto;
+}
+
+@media (max-width: 600px) {
+
+  body {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 15px;
+  }
+
+  input, select, button {
+    max-width: 100%;
+    font-size: 16px;
+  }
+
+  li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  li button {
+    width: 100%;
+  }
+
+  h2, h3 {
+    font-size: 18px;
+  }
+}
+
+#aidatList {
+  text-transform: uppercase;
+}
+
+.paid::after {
+  content: " — ÖDENDİ";
+  text-transform: uppercase;
+}
+
+.unpaid::after {
+  content: " — ÖDENMEDİ";
+  text-transform: uppercase;
+}
+
+#summaryBox {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  justify-content: space-between;
+}
+
+.summary-item {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.summary-total {
+  background: #e3f2fd;
+  color: #0d47a1;
+}
+
+.summary-paid {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.summary-unpaid {
+  background: #ffebee;
+  color: #b71c1c;
+}
+
+</style>
+</head>
+
+<body>
+<div class="card" id="loginCard">
+  <h2>Giriş Yap</h2>
+
+  <input id="email" type="email" placeholder="Email">
+  <input id="password" type="password" placeholder="Şifre">
+
+  <button type="button" onclick="login()">Giriş Yap</button>
+</div>
+
+<!-- LOGIN -->
+<div id="pdfSection" style="display:none">
+  <hr>
+  <h3>PDF Raporlar</h3>
+
+  <button onclick="downloadGeneralPdf()">Genel PDF Rapor</button>
+
+  <input id="pdfApartmentNo" placeholder="Daire No">
+  <button onclick="downloadApartmentPdf()">Daire PDF Raporu</button>
+
+  <input id="pdfMonth" placeholder="Ay (1-12)">
+  <input id="pdfYear" placeholder="Yıl (örn 2025)">
+  <button onclick="downloadMonthPdf()">Ay Bazlı PDF</button>
+</div>
+
+
+<button id="logoutBtn" class="danger" onclick="logout()" style="display:none">Çıkış</button>
+
+<!-- ADMIN PANEL -->
+<div class="card" id="adminPanel" style="display:none">
+<h2>Admin Paneli</h2>
+
+<!-- KULLANICI EKLE -->
+<h3>Daire Sahibi Ekle</h3>
+<input id="uName" placeholder="Ad Soyad">
+<input id="uEmail" placeholder="Email">
+<input id="uPassword" type="password" placeholder="Şifre">
+<input id="uApartmentNo" type="number" placeholder="Daire No">
+<button onclick="createUser()">Kullanıcı Oluştur</button>
+
+<h3>Şifremi Değiştir</h3>
+<input id="newAdminPassword" type="password" placeholder="Yeni şifre">
+<button onclick="changeAdminPassword()">Şifre Değiştir</button>
+
+<hr>
+
+<!-- KULLANICI LİSTESİ -->
+<h3>Kullanıcılar</h3>
+<ul id="userList"></ul>
+
+<hr>
+
+<!-- TEK AİDAT -->
+<h3>Aidat Oluştur</h3>
+<input id="aTitle" placeholder="Başlık">
+<input id="aAmount" type="number" placeholder="Tutar">
+<input id="aApartmentNo" type="number" placeholder="Daire No">
+<input id="aDueDate" type="date">
+<input id="month" placeholder="Ay">
+<input id="year" placeholder="Yıl">
+<button onclick="createAidat()">Aidat Oluştur</button>
+
+<hr>
+
+<!-- TOPLU -->
+<h3>Toplu Aidat</h3>
+<input id="bTitle" placeholder="Başlık">
+<input id="bAmount" type="number" placeholder="Tutar">
+<input id="bDueDate" type="date">
+<input id="bMonth" placeholder="Ay">
+<input id="bYear" placeholder="Yıl">
+<button onclick="createBulkAidat()">Toplu Aidat</button>
+</div>
+
+<!-- AIDATLAR -->
+<div class="card" id="aidatSection" style="display:none">
+<h2 id="welcomeUser" style="margin-bottom:20px;"></h2>
+<h2>Aidatlar</h2>
+<div id="summaryBox">
+  <div class="summary-item summary-total">
+    Toplam<br>
+    <span id="sumTotal">0</span> TL
+  </div>
+
+  <div class="summary-item summary-paid">
+    Ödenen<br>
+    <span id="sumPaid">0</span> TL
+  </div>
+
+  <div class="summary-item summary-unpaid">
+    Kalan<br>
+    <span id="sumUnpaid">0</span> TL
+  </div>
+</div>
+
+<div id="userPasswordSection">
+  <hr>
+  <h3>Şifremi Değiştir</h3>
+  <input id="newUserPassword" type="password" placeholder="Yeni şifre">
+  <button onclick="changeMyPassword()">Şifre Değiştir</button>
+</div>
+
+<!-- FİLTRE -->
+<select id="filterMonth">
+  <option value="">Ay (Hepsi)</option>
+  <option value="1">Ocak</option><option value="2">Şubat</option>
+  <option value="3">Mart</option><option value="4">Nisan</option>
+  <option value="5">Mayıs</option><option value="6">Haziran</option>
+  <option value="7">Temmuz</option><option value="8">Ağustos</option>
+  <option value="9">Eylül</option><option value="10">Ekim</option>
+  <option value="11">Kasım</option><option value="12">Aralık</option>
+</select>
+
+<input id="filterYear" placeholder="Yıl (örn 2025)">
+<button onclick="applyFilter()">Filtrele</button>
+
+<hr>
+<ul id="aidatList"></ul>
+</div>
+
+<script>
+const API="https://apartman-aidat-backend.onrender.com/api";
+const aidatList=document.getElementById("aidatList");
+const userList=document.getElementById("userList");
+let allAidatlar=[];
+let usersMap = {}; // daireNo -> ad soyad
+
+const token=()=>localStorage.getItem("token");
+
+document.getElementById("pdfSection").style.display = "none";
+/* LOGIN */
+async function login() {
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+
+  console.log("EMAIL:", email);
+  console.log("PASSWORD:", password);
+
+  const res = await fetch(`${API}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
+
+  const data = await res.json();
+  console.log("LOGIN CEVABI:", data);
+
+  if (!res.ok) {
+    alert(data.message || "Giriş başarısız");
+    return;
+  }
+
+  localStorage.setItem("token", data.token);
+  localStorage.setItem("user", JSON.stringify(data.user));
+
+  location.reload();
+}
+
+async function loadCurrentUser() {
+  const res = await fetch(`${API}/users/me`, {
+    headers: { Authorization: "Bearer " + token() }
+  });
+
+  if (!res.ok) return;
+
+  const user = await res.json();
+  localStorage.setItem("currentUser", JSON.stringify(user));
+
+  document.getElementById("welcomeUser").innerText =
+    `Hoş geldiniz, ${user.name} (Daire ${user.apartmentNo})`;
+}
+
+/* USERS */
+async function getUsers(){
+  const res=await fetch(`${API}/users`,{
+    headers:{ Authorization:"Bearer "+token() }
+  });
+
+  if (!res.ok) return; // 🔥 KRİTİK SATIR
+
+  const users=await res.json();
+
+  usersMap = {}; // 🔹 EKLENDİ
+  userList.innerHTML="";
+
+  users.forEach(u=>{
+    usersMap[u.apartmentNo] = u.name; // 🔹 EKLENDİ
+
+    const li=document.createElement("li");
+    li.innerHTML=`<span>${u.name} - Daire ${u.apartmentNo}<br>
+      <span class="small">${u.email}</span></span>`;
+
+    const delBtn=document.createElement("button");
+    delBtn.innerText="Sil";
+    delBtn.className="danger";
+    delBtn.onclick=()=>deleteUser(u._id);
+
+    li.appendChild(delBtn);
+    userList.appendChild(li);
+
+    const resetBtn = document.createElement("button");
+resetBtn.innerText = "Şifre Sıfırla";
+resetBtn.onclick = () => resetUserPassword(u._id);
+
+li.appendChild(resetBtn);
+
+const editBtn = document.createElement("button");
+editBtn.innerText = "İsmi Değiştir";
+editBtn.onclick = () => editUserName(u._id, u.name);
+
+li.appendChild(editBtn);
+
+  });
+}
+
+/* AIDATLAR */
+async function getAllAidatlar(){
+  const res=await fetch(`${API}/aidat`,{
+    headers:{ Authorization:"Bearer "+token() }
+  });
+  allAidatlar=await res.json();
+  if (isAdmin()) {
+  renderAidatlarAdmin(allAidatlar);
+} else {
+  renderAidatlar(allAidatlar);
+}
+}
+
+async function getMyAidatlar(){
+  console.log("🟡 getMyAidatlar ÇALIŞTI");
+
+  const res = await fetch(`${API}/aidat/me`, {
+    headers: { Authorization: "Bearer " + token() }
+  });
+
+  if (!res.ok) {
+    console.warn("⛔ Aidatlar alınamadı:", res.status);
+    return; // 🔴 ÇOK ÖNEMLİ
+  }
+
+  const data = await res.json();
+  console.log("🟢 API'DAN GELEN VERİ:", data);
+
+  allAidatlar = data;
+  renderAidatlar(allAidatlar);
+}
+
+
+function applyFilter(){
+  const m=filterMonth.value;
+  const y=filterYear.value;
+  const filtered=allAidatlar.filter(a=>{
+    if(m && a.month!=m) return false;
+    if(y && a.year!=y) return false;
+    return true;
+  });
+  renderAidatlar(filtered);
+}
+
+function renderAidatlar(list) {
+  aidatList.innerHTML = "";
+
+  list.forEach(a => {
+    const li = document.createElement("li");
+
+    li.innerHTML = `
+      <span class="${a.paid ? 'paid' : 'unpaid'}">
+        ${a.title} – ${a.amount} TL
+        <strong>
+        <br>
+        <span class="small">${a.month}/${a.year}</span>
+      </span>
+    `;
+
+    aidatList.appendChild(li);
+  });
+
+  updateSummary(list);
+}
+
+function renderAidatlarAdmin(list) {
+  aidatList.innerHTML = "";
+
+  list.forEach(a => {
+    const li = document.createElement("li");
+
+    li.innerHTML = `
+      <span class="${a.paid ? "paid" : "unpaid"}">
+        Daire ${a.apartmentNo} - ${usersMap[a.apartmentNo] || "İsim yok"}
+        <br>
+        ${a.title} - ${a.amount}₺
+        <span class="small">${a.month}/${a.year}</span>
+      </span>
+    `;
+
+    if (!a.paid) li.appendChild(btn("Ödendi", () => markAsPaid(a._id)));
+    else li.appendChild(btn("Geri Al", () => markAsUnpaid(a._id)));
+
+    li.appendChild(btn("Sil", () => deleteAidat(a._id), "danger"));
+
+    aidatList.appendChild(li);
+  });
+
+  updateSummary(list);
+
+}
+
+async function downloadMonthPdf() {
+  const month = pdfMonth.value;
+  const year = pdfYear.value;
+
+  if (!month || !year) {
+    return alert("Ay ve yıl seçmelisin");
+  }
+
+  const res = await fetch(
+    `${API}/aidat/pdf/month/${year}/${month}`,
+    {
+      headers: {
+        Authorization: "Bearer " + token()
+      }
+    }
+  );
+
+  if (!res.ok) {
+    return alert("Yetkisiz erişim");
+  }
+
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  window.open(url, "_blank");
+}
+
+/* BUTTON */
+const btn=(t,f,c="")=>{const b=document.createElement("button");b.innerText=t;b.onclick=f;b.className=c;return b;};
+
+/* API ACTIONS */
+async function markAsPaid(id){
+  await fetch(`${API}/aidat/${id}/paid`,{method:"PUT",headers:{Authorization:"Bearer "+token()}});
+  getAllAidatlar();
+}
+async function markAsUnpaid(id){
+  await fetch(`${API}/aidat/${id}/unpaid`,{method:"PUT",headers:{Authorization:"Bearer "+token()}});
+  getAllAidatlar();
+}
+async function deleteAidat(id){
+  if(!confirm("Silinsin mi?")) return;
+  await fetch(`${API}/aidat/${id}`,{method:"DELETE",headers:{Authorization:"Bearer "+token()}});
+  getAllAidatlar();
+}
+async function createUser(){
+  await fetch(`${API}/users/create-user`,{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json",
+      Authorization:"Bearer "+token()
+    },
+    body:JSON.stringify({
+      name: uName.value,
+      email: uEmail.value,
+      password: uPassword.value,
+      apartmentNo: Number(uApartmentNo.value)
+    })
+  });
+  getUsers();
+}
+
+async function deleteUser(id){
+  if(!confirm("Kullanıcı silinsin mi?")) return;
+
+  await fetch(`${API}/users/${id}`,{
+    method:"DELETE",
+    headers:{
+      Authorization:"Bearer "+token()
+    }
+  });
+
+  getUsers();
+}
+async function createAidat() {
+  const titleEl = document.getElementById("aTitle");
+  const amountEl = document.getElementById("aAmount");
+  const apartmentNoEl = document.getElementById("aApartmentNo");
+  const dueDateEl = document.getElementById("aDueDate");
+  const monthEl = document.getElementById("month");
+  const yearEl = document.getElementById("year");
+
+  if (
+    !titleEl.value ||
+    !amountEl.value ||
+    !apartmentNoEl.value ||
+    !dueDateEl.value ||
+    !monthEl.value ||
+    !yearEl.value
+  ) {
+    return alert("Tüm alanları doldur");
+  }
+
+  const res = await fetch(`${API}/aidat`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token()
+    },
+    body: JSON.stringify({
+      title: titleEl.value,
+      amount: Number(amountEl.value),
+      apartmentNo: Number(apartmentNoEl.value),
+      dueDate: dueDateEl.value,
+      month: Number(monthEl.value),
+      year: Number(yearEl.value)
+    })
+  });
+
+  const data = await res.json();
+  if (!res.ok) return alert(data.message || "Aidat oluşturulamadı");
+
+  alert("Aidat oluşturuldu");
+  getAllAidatlar();
+}
+
+
+async function createBulkAidat() {
+  const title = bTitle.value;
+  const amount = Number(bAmount.value);
+  const dueDate = bDueDate.value;
+  const month = Number(bMonth.value);
+  const year = Number(bYear.value);
+
+  if (!title || !amount || !dueDate || !month || !year) {
+    return alert("Tüm alanları doldur");
+  }
+
+  // 🔹 TÜM KULLANICILARI ÇEK
+  const usersRes = await fetch(`${API}/users`, {
+    headers: { Authorization: "Bearer " + token() }
+  });
+
+  const users = await usersRes.json();
+
+  if (!users.length) {
+    return alert("Hiç kullanıcı yok");
+  }
+
+  // 🔹 HER KULLANICIYA AİDAT EKLE
+  for (const u of users) {
+    await fetch(`${API}/aidat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token()
+      },
+      body: JSON.stringify({
+        title,
+        amount,
+        apartmentNo: u.apartmentNo,
+        dueDate,
+        month,
+        year
+      })
+    });
+  }
+
+  alert("Tüm dairelere aidat eklendi");
+  getAllAidatlar();
+}
+
+async function requestNotificationPermission() {
+  if (!("Notification" in window)) return;
+
+  const permission = await Notification.requestPermission();
+  console.log("Bildirim izni:", permission);
+}
+
+function logout(){ localStorage.clear(); location.reload(); }
+
+</script>
+
+<script>
+// if ("serviceWorker" in navigator) {
+//  navigator.serviceWorker.register("/service-worker.js");
+// }
+
+
+function downloadGeneralPdf() {
+  window.open(`${API}/aidat/pdf/general?token=${token()}`, "_blank");
+}
+
+function downloadApartmentPdf() {
+  const no = pdfApartmentNo.value;
+  if (!no) return alert("Daire no gir");
+
+  window.open(
+    `${API}/aidat/pdf/apartment/${no}?token=${token()}`,
+    "_blank"
+  );
+}
+
+function isAdmin() {
+  const user = JSON.parse(localStorage.getItem("user"));
+  return user && user.role === "admin";
+}
+
+const currentUser = JSON.parse(localStorage.getItem("user"));
+
+window.onload = () => {
+  const t = localStorage.getItem("token");
+
+  if (!t) {
+    loginCard.style.display = "block";
+    logoutBtn.style.display = "none";
+    adminPanel.style.display = "none";
+    aidatSection.style.display = "none";
+    pdfSection.style.display = "none";
+    return;
+  }
+
+  loginCard.style.display = "none";
+  logoutBtn.style.display = "block";
+  aidatSection.style.display = "block";
+
+  const user = JSON.parse(localStorage.getItem("user"));
+
+  // 👑 ADMIN
+  if (user && user.role === "admin") {
+    adminPanel.style.display = "block";
+    pdfSection.style.display = "block";
+
+    // 🔴 ADMIN SADECE BUNLARI YAPAR
+    getUsers();                // isimler için
+    getAllAidatlar();          // TÜM aidatlar
+
+    // Admin için hoş geldiniz yazısını temizle
+    document.getElementById("welcomeUser").innerText = "Hoş geldiniz, Admin";
+
+    const userPassSection = document.getElementById("userPasswordSection");
+if (userPassSection) userPassSection.style.display = "none";
+
+  } 
+  // 👤 NORMAL USER
+  else {
+    adminPanel.style.display = "none";
+    pdfSection.style.display = "none";
+
+    getMyAidatlar();           // SADECE KENDİ AİDATLARI
+    loadCurrentUser();         // isim + daire no
+  }
+};
+
+async function changeAdminPassword() {
+  const newPassword = document.getElementById("newAdminPassword").value;
+
+  if (!newPassword || newPassword.length < 6) {
+    return alert("Şifre en az 6 karakter olmalı");
+  }
+
+  const res = await fetch(`${API}/users/change-password`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token()
+    },
+    body: JSON.stringify({ newPassword })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    return alert(data.message || "Şifre değiştirilemedi");
+  }
+
+  alert("Şifre başarıyla değiştirildi");
+  document.getElementById("newAdminPassword").value = "";
+}
+
+async function changeMyPassword() {
+  const newPassword = document.getElementById("newUserPassword").value;
+
+  if (!newPassword || newPassword.length < 6) {
+    return alert("Şifre en az 6 karakter olmalı");
+  }
+
+  const res = await fetch(`${API}/users/change-password`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token()
+    },
+    body: JSON.stringify({ newPassword })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    return alert(data.message || "Şifre değiştirilemedi");
+  }
+
+  alert("Şifre başarıyla değiştirildi");
+  document.getElementById("newUserPassword").value = "";
+}
+
+async function resetUserPassword(userId) {
+  const newPassword = prompt("Yeni şifreyi gir (en az 6 karakter)");
+
+  if (!newPassword || newPassword.length < 6) {
+    return alert("Geçersiz şifre");
+  }
+
+  const res = await fetch(`${API}/users/reset-password/${userId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + token()
+    },
+    body: JSON.stringify({ newPassword })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    return alert(data.message || "Şifre sıfırlanamadı");
+  }
+
+  alert("Kullanıcı şifresi sıfırlandı");
+}
+
+async function editUserName(userId) {
+  const name = prompt("Yeni isim:");
+
+  if (!name) return;
+
+  await fetch(`${API}/users/${userId}/update-name`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + localStorage.getItem("token")
+    },
+    body: JSON.stringify({ name })
+  });
+
+  alert("İsim güncellendi");
+  getUsers();        // listeyi yenile
+  getAllAidatlar(); // aidatlarda isim güncellensin
+}
+
+function updateSummary(list) {
+  let total = 0;
+  let paid = 0;
+  let unpaid = 0;
+
+  list.forEach(a => {
+    total += a.amount;
+    if (a.paid) paid += a.amount;
+    else unpaid += a.amount;
+  });
+
+  document.getElementById("sumTotal").innerText = total;
+  document.getElementById("sumPaid").innerText = paid;
+  document.getElementById("sumUnpaid").innerText = unpaid;
+}
+</script>
+</body>
+</html>
